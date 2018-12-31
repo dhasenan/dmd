@@ -235,6 +235,9 @@ override DFLAGS += -version=MARS $(PIC) -J$G
 # Enable D warnings
 override DFLAGS += -w -de
 
+ifdef ENABLE_GC
+override DFLAGS += -version=GC
+endif
 # Append different flags for debugging, profiling and release.
 ifdef ENABLE_DEBUG
 CXXFLAGS += -g -g3 -DDEBUG=1 -DUNITTEST
