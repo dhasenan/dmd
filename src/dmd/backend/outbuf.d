@@ -33,7 +33,10 @@ struct Outbuffer
 
     this(ubyte *bufx, size_t bufxlen, uint incx)
     {
-        buf = bufx; pend = bufx + bufxlen; p = bufx; origbuf = bufx;
+        buf = bufx;
+        pend = bufx + bufxlen;
+        p = bufx;
+        origbuf = bufx;
     }
 
     //~this();
@@ -51,7 +54,64 @@ struct Outbuffer
     }
 
     // Reserve nbytes in buffer
-    void enlarge(uint nbytes);
+    void enlarge(uint nbytes)
+    {
+        const oldlen = pend - buf;
+        const used = p - buf;
+
+        auto len = used + nbytes;
+        if (len <= oldlen)
+            return;
+
+        const newlen = oldlen + (oldlen >> 1);   // oldlen * 1.5
+        if (len < newlen)
+            len = newlen;
+        len = (len + 15) & ~15;
+
+        version (MEM_DEBUG)
+        {
+            if (buf == origbuf)
+            {
+                buf = (unsigned char *) mem_malloc(len);
+                if (buf)
+                    memcpy(buf, origbuf, oldlen);
+            }
+            else
+                buf = (unsigned char *)mem_realloc(buf, len);
+        }
+        else
+        {
+            if (buf == origbuf && origbuf)
+            {
+                buf = malloc(len);
+                if (buf)
+                    memcpy(buf, origbuf, used);
+            }
+            else
+            {
+                version (GC)
+                {
+                    buf = realloc(buf,len);
+                }
+                else
+                {
+                    buf = malloc(len);
+                    if (buf)
+                        memcpy(buf, origbuf, used);
+                }
+            }
+        }
+        if (!buf)
+        {
+            import core.stdc.stdio : fprintf;
+            import core.stdc.stdlib : exit, EXIT_FAILURE;
+            fprintf(stderr, "Fatal Error: Out of memory");
+            exit(EXIT_FAILURE);
+        }
+
+        pend = buf + len;
+        p = buf + used;
+    }
 
     // Write n zeros; return pointer to start of zeros
     void *writezeros(uint n)
