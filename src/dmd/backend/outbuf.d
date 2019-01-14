@@ -37,6 +37,11 @@ struct Outbuffer
         pend = bufx + bufxlen;
         p = bufx;
         origbuf = bufx;
+        version (GC)
+        {
+            import core.memory : GC;
+            GC.addRoot(buf);
+        }
     }
 
     //~this();
@@ -56,6 +61,8 @@ struct Outbuffer
     // Reserve nbytes in buffer
     void enlarge(uint nbytes)
     {
+        import dmd.backend.memh : mem_realloc, mem_malloc;
+        import core.stdc.stdlib : malloc, realloc;
         const oldlen = pend - buf;
         const used = p - buf;
 
@@ -72,18 +79,18 @@ struct Outbuffer
         {
             if (buf == origbuf)
             {
-                buf = (unsigned char *) mem_malloc(len);
+                buf = cast(ubyte*)mem_malloc(len);
                 if (buf)
                     memcpy(buf, origbuf, oldlen);
             }
             else
-                buf = (unsigned char *)mem_realloc(buf, len);
+                buf = cast(ubyte*)mem_realloc(buf, len);
         }
         else
         {
             if (buf == origbuf && origbuf)
             {
-                buf = malloc(len);
+                buf = cast(ubyte*)malloc(len);
                 if (buf)
                     memcpy(buf, origbuf, used);
             }
@@ -91,19 +98,21 @@ struct Outbuffer
             {
                 version (GC)
                 {
-                    buf = realloc(buf,len);
+                    buf = cast(ubyte*)malloc(len);
+                    if (buf && origbuf)
+                        memcpy(buf, origbuf, used);
+                    import core.memory : GC;
+                    GC.addRoot(buf);
                 }
                 else
                 {
-                    buf = malloc(len);
-                    if (buf)
-                        memcpy(buf, origbuf, used);
+                    buf = cast(ubyte*)realloc(buf,len);
                 }
             }
         }
         if (!buf)
         {
-            import core.stdc.stdio : fprintf;
+            import core.stdc.stdio : fprintf, stderr;
             import core.stdc.stdlib : exit, EXIT_FAILURE;
             fprintf(stderr, "Fatal Error: Out of memory");
             exit(EXIT_FAILURE);
