@@ -498,8 +498,8 @@ extern (C++) final class Module : Package
         {
             parts = [filename];
         }
-        import dmd.root.filesystem : sourceCache;
-        auto realPath = sourceCache.lookup(parts).ptr;
+        import dmd.importcache : potentialImportCache;
+        auto realPath = potentialImportCache.lookup(parts).ptr;
         auto m = new Module(realPath, ident, 0, 0);
         m.loc = loc;
         /* Look for the source file

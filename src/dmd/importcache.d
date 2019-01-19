@@ -1,13 +1,13 @@
-module dmd.root.filesystem;
+module dmd.importcache;
 
 import dmd.root.array;
 import dmd.root.filename;
 import dmd.root.rmem;
 version (Posix) import core.sys.posix.dirent;
 
-__gshared SourceFileCache sourceCache;
+__gshared PotentialImportCache potentialImportCache;
 
-class SourceFileCache
+class PotentialImportCache
 {
     private const(char)[][] importPaths;
     private Entry[] roots;
@@ -19,13 +19,15 @@ class SourceFileCache
         import dmd.globals : global;
         import dmd.utils : toDString;
         auto imppath = global.params.imppath;
-
-        for (size_t i = 0; i < imppath.dim; i++)
+        if (imppath != null)
         {
-            auto p = (*imppath)[i];
-            loadRoot(p.toDString);
+            for (size_t i = 0; i < imppath.dim; i++)
+            {
+                auto p = (*imppath)[i];
+                loadRoot(p.toDString);
+            }
+            loadRoot(".");
         }
-        loadRoot(".");
         loaded = true;
     }
 
@@ -109,6 +111,7 @@ class SourceFileCache
             child.name = nameToDString(dirent.d_name);
             dir.children ~= child;
         }
+        closedir(p);
     }
 
     version (Posix) private EntryType trueType(const(char)* path)
