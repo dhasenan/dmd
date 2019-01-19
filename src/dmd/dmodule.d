@@ -431,8 +431,17 @@ extern (C++) final class Module : Package
         // into:
         //  foo\bar\baz
         const(char)[] filename = ident.toString();
+        const(char)[][] parts;
         if (packages && packages.dim)
         {
+            parts = new const(char)[][packages.dim + 1];
+            parts[$-1] = filename;
+            foreach (i, pid; *packages)
+            {
+                const p = pid.toString();
+                parts[i] = p;
+            }
+            /+
             OutBuffer buf;
             OutBuffer dotmods;
             auto ms = global.params.modFileAliasStrings;
@@ -483,13 +492,20 @@ extern (C++) final class Module : Package
                 checkModFileAlias(filename);
             buf.writeByte(0);
             filename = buf.extractData().toDString();
+            +/
         }
-        auto m = new Module(filename.ptr, ident, 0, 0);
+        else
+        {
+            parts = [filename];
+        }
+        import dmd.root.filesystem : sourceCache;
+        auto realPath = sourceCache.lookup(parts).ptr;
+        auto m = new Module(realPath, ident, 0, 0);
         m.loc = loc;
         /* Look for the source file
          */
-        if (const result = lookForSourceFile(filename))
-            m.srcfile = new File(result);
+        if (realPath !is null)
+            m.srcfile = new File(realPath);
 
         if (!m.read(loc))
             return null;

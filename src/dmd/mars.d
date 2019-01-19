@@ -368,6 +368,9 @@ private int tryMain(size_t argc, const(char)** argv, ref Param params)
     builtin_init();
     import dmd.filecache : FileCache;
     FileCache._init();
+    import dmd.root.filesystem : sourceCache, SourceFileCache;
+    sourceCache = new SourceFileCache();
+    sourceCache.loadEager;
 
     version(CRuntime_Microsoft)
     {
